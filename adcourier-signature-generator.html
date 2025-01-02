@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdCourier Signature Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 450px;
+            position: relative;
+        }
+
+        h1,
+        h2 {
+            text-align: center;
+        }
+
+        h1 {
+            background-color: #28a745; /* Matching the button color */ 
+            color: white; 
+            padding: 20px; 
+            margin: 0; 
+            border-radius: 8px 8px 0 0; /* Rounded top corners */ 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Subtle shadow */ 
+            font-size: 24px;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: normal;
+            font-style: italic;
+        }
+
+        input {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-top: 5px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            width: calc(50% - 5px);
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        #output {
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .code-box {
+            margin-top: 10px;
+            position: relative;
+            background-color: #f9f9f9;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 30px 10px 10px 10px;
+            overflow: hidden;
+            min-height: 30px;
+        }
+
+        .code-box pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .code-box button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            padding: 3px 3px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            max-width: 45px;
+            max-height: 30px;
+        }
+
+        .code-box button:hover {
+            background-color: #0056b3;
+        }
+
+        .code-box label {
+            position: absolute;
+            top: 5px;
+            margin-top: 0px;
+        }
+
+        .footer-text { 
+            position: absolute; 
+            bottom: 3px;
+            right: 20px; 
+            font-size: 12px; 
+            font-style: italic; 
+            color: #888; 
+        }
+
+        #clearButton { 
+            background-color: #dc3545; 
+        }
+
+        #clearButton:hover { 
+            background-color: #c82333; 
+        }
+
+        /* Click animation */
+        button:active {
+            transform: scale(0.98); /* Slightly shrink the button */
+        } 
+        
+        /* Ripple effect */
+        button::after {
+            content: "";
+            display: block;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            background-image: radial-gradient(circle, #fff 10%, transparent 10.01%);
+            background-repeat: no-repeat;
+            background-position: 50%;
+            transform: scale(10, 10);
+            opacity: 0;
+            transition: transform 0.2s, opacity 0.4s;
+        }
+
+        button:active::after {
+            transform: scale(0, 0);
+            opacity: 0.3;
+            transition: 0s;
+        }
+
+        #countdown {
+            position: absolute;
+            bottom: 3px;
+            left: 20px;
+            text-align: center; 
+            margin-top: 20px; 
+            font-size: 12px; 
+            font-style: italic;  
+            color: #dc3545; 
+        }
+
+        .red {
+            color: red;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>AdCourier Signature Generator</h1>
+        <form id="hmacForm"> 
+            <label for="userId">User ID <span class="red">*</span></label> <input type="text" id="userId" required> 
+            <label for="secretKey">Secret Key <span class="red">*</span></label> <input type="text" id="secretKey" required> 
+            <label for="apiKey">API Key <span class="red">*</span></label> <input type="text" id="apiKey" required> 
+            <div style="display: flex; justify-content: space-between;"> 
+                <button type="button" onclick="generateSignature()">Generate</button>
+                <button type="button" id="clearButton" onclick="clearAll()">Clear</button>
+            </div>
+        </form>
+        <div id="output">
+            <div class="code-box">
+                <label>Time</label>
+                <pre><code id="currentTimeBox"></code></pre>
+                <button onclick="copyText('currentTimeBox')">Copy</button>
+            </div>
+            <div class="code-box">
+                <label>Hash</label>
+                <pre><code id="signatureBox"></code></pre>
+                <button onclick="copyText('signatureBox')">Copy</button>
+            </div>
+        </div>
+        <div id="countdown"></div>
+        <div class="footer-text">From Augustine with ❤️</div>
+    </div>
+    <script>
+        let countdownInterval;
+        async function generateSignature() {
+            const form = document.getElementById('hmacForm'); 
+            if (!form.checkValidity()) {
+                const invalidFields = form.querySelectorAll('input:invalid'); 
+                invalidFields.forEach(field => { field.classList.add('invalid'); }); 
+                alert('Please fill out all required fields.'); 
+                return;     
+            }
+
+            const userId = document.getElementById('userId').value; 
+            const secretKey = document.getElementById('secretKey').value; 
+            const apiKey = document.getElementById('apiKey').value; 
+            const currentTime = new Date().getTime(); 
+            document.getElementById('currentTimeBox').textContent = currentTime; 
+            
+            const message = userId + '|' + currentTime + '|' + apiKey; 
+            const encoder = new TextEncoder(); 
+            const secretKeyData = encoder.encode(secretKey); 
+            const algorithm = { name: "HMAC", hash: "SHA-256" }; 
+            const cryptoKey = await crypto.subtle.importKey("raw", secretKeyData, algorithm, false, ["sign"]); 
+            const signature = await crypto.subtle.sign("HMAC", cryptoKey, encoder.encode(message)); 
+            const hexSignature = Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join(''); 
+            document.getElementById('signatureBox').textContent = hexSignature;
+
+            clearInterval(countdownInterval);
+            startCountdown(30);
+        } 
+        
+        function copyText(elementId) { 
+            const text = document.getElementById(elementId).textContent; 
+            navigator.clipboard.writeText(text)
+                .then(() => { alert('Copied: ' + text); })
+                .catch(err => { console.error('Failed to copy: ', err); }); 
+        }
+
+        function clearAll() { 
+            document.getElementById('userId').value = ''; 
+            document.getElementById('secretKey').value = ''; 
+            document.getElementById('apiKey').value = ''; 
+            document.getElementById('currentTimeBox').textContent = ''; 
+            document.getElementById('signatureBox').textContent = '';
+            clearInterval(countdownInterval);
+            document.getElementById('countdown').textContent = "";
+        }
+
+        function startCountdown(duration) {
+            let timer = duration;
+            document.getElementById('countdown').textContent = `Expires in ${timer} seconds`;
+            countdownInterval = setInterval(() => {
+                timer--;
+                document.getElementById('countdown').textContent = `Expires in ${timer} seconds`;
+                if (timer <= 0) {
+                    clearAll();
+                    document.getElementById('countdown').textContent = 'Expired';
+                }
+            }, 1000);
+        }
+    </script>
+</body>
+
+</html>
